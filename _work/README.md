@@ -28,7 +28,7 @@ M5 only depends on M2 and the contracts, so it can run in parallel with M4.
 
 | ID | Title | Milestone | Status | Depends |
 |---|---|---|---|---|
-| [000](issues/000-project-skeleton.md) | Project skeleton: package, CLI, config, tests | M1 | open | – |
+| [000](issues/000-project-skeleton.md) | Project skeleton: package, CLI, config, tests | M1 | done | – |
 | [011](issues/011-contracts.md) | Layer contracts: canonical schema, capabilities, model interface, registry | M1 | open | 000 |
 | [001](issues/001-parse-score-sheet.md) | Parse a SAMS score sheet into a match record | M2 | open | 000 |
 | [002](issues/002-rebuild-rallies.md) | Rebuild the rally sequence per set | M2 | open | 001, 011 |

@@ -1,0 +1,34 @@
+# Settings for the impact CLI. Paths are relative to this file.
+
+[data]
+derived = "data/derived"        # rally table, ratings, reports (git-ignored)
+positions = "data/positions"    # manual position lists (issue 012)
+
+# One entry per folder of score sheets.
+[[sources]]
+league = "Landesliga Damen 1-4"
+season = "2025/26"
+folder = "data/LL_2526"
+format = "sams_pdf"
+
+[[sources]]
+league = "Landesliga 4 Frauen"
+season = "2026/27"
+folder = "data/LL4_2627"
+format = "sams_pdf"
+
+[model]
+default = "auto"                # or team_only, plus_minus, rapm_sams, rapm_positions
+
+[model.leagues]                 # per-league override, e.g. "Landesliga 4 Frauen" = "plus_minus"
+
+[windows]
+form_matches = 3                # K
+season_carry_over = 0.7         # rho
+
+[thresholds]
+positions_coverage = 0.9        # share of on-court slots with a known position
+min_rallies = 100               # below this a rating is flagged as a small sample
+
+[libero]
+may_serve = false               # whether a libero may serve in these leagues

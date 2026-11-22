@@ -9,6 +9,8 @@ data/**
 __pycache__/
 *.pyc
 .venv/
+*.egg-info/
+.pytest_cache/
 
 # Local Claude settings
 .claude/settings.local.json

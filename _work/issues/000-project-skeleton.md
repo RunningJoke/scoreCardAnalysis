@@ -1,7 +1,7 @@
 ---
 id: 000
 title: "Project skeleton: package, CLI, config, tests"
-status: open
+status: done
 depends: []
 ---
 
@@ -18,9 +18,13 @@ A runnable, empty project that every later issue builds on.
 
 ## Acceptance criteria
 
-- [ ] `pyproject.toml` with the dependencies above; `src/impact/` package; `impact` console command
-- [ ] `impact --help` lists the subcommands `ingest`, `fit`, `report` and `backtest` (stubs)
-- [ ] `impact.toml` with data folders, leagues, window settings and `model = "auto"`; loaded by `config.py`
-- [ ] pytest runs green on a fresh clone; tests that need PDFs skip when `data/` is empty
-- [ ] `.gitattributes` for consistent line endings
-- [ ] Setup and commands added to `README.md` and `CLAUDE.md`
+- [x] `pyproject.toml` with the dependencies above; `src/impact/` package; `impact` console command
+- [x] `impact --help` lists the subcommands `ingest`, `fit`, `report` and `backtest` (stubs)
+- [x] `impact.toml` with data folders, leagues, window settings and `model = "auto"`; loaded by `config.py`
+- [x] pytest runs green on a fresh clone; tests that need PDFs skip when `data/` is empty
+- [x] `.gitattributes` for consistent line endings
+- [x] Setup and commands added to `README.md` and `CLAUDE.md`
+
+## Result
+
+6 tests pass (one uses the real PDFs via the `score_sheets` fixture). The config check rejects unknown model names. The stubs exit with code 2 and name the issue that implements them.

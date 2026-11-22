@@ -12,7 +12,17 @@ The baseline is the concept canvas "Rally Impact Model" (v0.1, 2026-11-21). Star
 
 ## Status
 
-Concept and architecture are done. No code yet. The work queue is in [_work/README.md](_work/README.md); milestone M1 (project skeleton, contracts) is next.
+Concept and architecture are done; the project skeleton (issue 000) exists, with all CLI commands still stubs. The work queue is in [_work/README.md](_work/README.md); issue 011 (layer contracts) is next.
+
+## Commands
+
+```
+python -m venv .venv && .venv/Scripts/python -m pip install -e ".[dev]"   # setup
+.venv/Scripts/python -m pytest                                          # tests
+.venv/Scripts/impact --help                                             # CLI
+```
+
+Settings: `impact.toml` (loaded by `src/impact/config.py`; folders resolve relative to the file). Test fixtures: `cfg` and `score_sheets` in `tests/conftest.py`; `score_sheets` skips when no PDFs are present.
 
 ## Decisions taken (re-open only with the team)
 
@@ -49,6 +59,17 @@ Concept and architecture are done. No code yet. The work queue is in [_work/READ
 | `_doc/` | Concept and design docs, one topic per file; `00_overview.md` is the entry; `artifacts/` holds the published canvas HTML |
 | `_work/` | Issue tracking until the move to GitHub: `README.md` is the backlog, `issues/NNN-slug.md` holds one issue each |
 | `.claude/skills/` | Project skills, one folder per skill with a `SKILL.md`. Claude Code loads them from here. |
+
+## Workflow
+
+1. **Align before implementing.** Before any implementation, the orchestrator (the main session) restates the task, the acceptance criteria and its open questions, and resolves every ambiguity with the user. No code until both agree.
+2. **Visuals: ask about a canvas first.** When a task involves visuals (reports, charts, page layouts), ask whether a canvas is wanted before implementing. All design layouts live in **one** design canvas, which is updated rather than replaced. Link it here when it is first created. (The concept canvas in `_doc/00_overview.md` is separate: it documents the algorithm.)
+3. **Delegate by difficulty.** The orchestrator plans, reviews and integrates. Implementation goes to subagents:
+   - **Haiku**: mechanical work such as boilerplate, renames, simple tests, doc and backlog updates
+   - **Sonnet**: normal implementation such as parsers, models, CLI commands and the tests for them
+   - **Escalate** to the orchestrator when an agent is stuck (for example two failed attempts, failing tests it can't explain, or a question about the spec). The orchestrator then fixes the problem itself or clarifies with the user.
+   Every agent gets the issue file, the relevant `_doc/` section and the acceptance criteria. The orchestrator reviews and runs the tests before an issue counts as done.
+4. **Parallelize within a work package.** Split an issue or milestone into independent pieces and run them as parallel agents. Use separate git worktrees when pieces touch the same files. Sequence only where one piece needs another's output.
 
 ## Working rules
 
