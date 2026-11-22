@@ -1,0 +1,13 @@
+# Score sheets and reports contain personal data: keep the data/ folder structure, never its files.
+data/**
+!data/**/
+!data/**/.gitkeep
+!data/README.md
+
+# Python, if chosen (see _work/issues/000)
+__pycache__/
+*.pyc
+.venv/
+
+# Local Claude settings
+.claude/settings.local.json

@@ -1,0 +1,556 @@
+<title>Rally Impact Model</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; the pipeline strip on top, then a section per pipeline step, then model, outputs, checks. */
+:root {
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --ink: #15212c;
+  --muted: #586572;
+  --line: #d6dde4;
+  --accent: #1d5bb8;      /* court blue: model, ratings */
+  --serve: #c75b22;       /* court orange: serve, form */
+  --good: #2c7f51;
+  --warn: #9a6a12;
+  --bad: #b23a2e;
+  --tint: #e7eef8;
+  --tint-serve: #f8ece4;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f151b; --surface: #17202a; --ink: #e5ebf0; --muted: #9babb8; --line: #29353f;
+    --accent: #78a9ff; --serve: #f08d52; --good: #5cc28a; --warn: #e0b04f; --bad: #f07a6d;
+    --tint: #1b2a3d; --tint-serve: #2e2119; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f151b; --surface: #17202a; --ink: #e5ebf0; --muted: #9babb8; --line: #29353f;
+  --accent: #78a9ff; --serve: #f08d52; --good: #5cc28a; --warn: #e0b04f; --bad: #f07a6d;
+  --tint: #1b2a3d; --tint-serve: #2e2119; color-scheme: dark;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15.5px; line-height: 1.6; }
+.wrap { max-width: 1060px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 700; line-height: 1.05; text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: clamp(40px, 7vw, 64px); }
+h2 { font-size: clamp(28px, 4.2vw, 38px); }
+h3 { font-size: 21px; font-weight: 600; }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.muted { color: var(--muted); }
+code, .mono { font-family: var(--f-mono); font-size: 0.92em; }
+section { display: grid; gap: 20px; }
+.sec-head { display: grid; gap: 8px; }
+
+/* header */
+header { display: grid; gap: 18px; }
+.lede { font-size: 18px; max-width: 64ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 12px; font-size: 13.5px; display: inline-flex; gap: 6px; }
+.chip b { font-weight: 600; }
+.chip span { color: var(--muted); }
+
+/* pipeline strip */
+.pipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.pipe a { text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.pipe a:hover, .pipe a:focus-visible { border-color: var(--accent); outline: none; }
+.pipe a:focus-visible { box-shadow: 0 0 0 3px var(--tint); }
+.pipe .n { font-family: var(--f-display); font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; }
+.pipe .t { font-weight: 600; font-size: 14.5px; line-height: 1.3; }
+.pipe .o { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.pipe a.src { background: transparent; border-style: dashed; }
+.pipe a.src .n { color: var(--muted); }
+.pipe a.out { background: var(--tint); border-color: transparent; }
+
+/* step blocks */
+.step { display: grid; grid-template-columns: 64px 1fr; gap: 0 20px; border-top: 1px solid var(--line); padding-top: 22px; }
+.step > .num { font-family: var(--f-display); font-size: 44px; font-weight: 700; color: var(--accent); line-height: 0.9; }
+.step > .body { display: grid; gap: 14px; min-width: 0; }
+.io { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 0; }
+.io > div { min-width: 0; }
+.io dt { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.io dd { margin: 0; font-size: 14.5px; }
+ul.tight { margin: 0; padding-left: 18px; display: grid; gap: 4px; max-width: 70ch; }
+.note { font-size: 14px; background: var(--tint); border-radius: 10px; padding: 10px 14px; max-width: 72ch; }
+
+/* tables */
+.tbl { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.mono { white-space: nowrap; }
+.caption { font-size: 12.5px; color: var(--muted); }
+
+/* formula */
+.formula { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; overflow-x: auto; font-family: var(--f-mono); font-size: 15px; line-height: 1.9; }
+.formula .row { white-space: nowrap; }
+.t-base { color: var(--muted); }
+.t-play { color: var(--accent); font-weight: 500; }
+.t-srv { color: var(--serve); font-weight: 500; }
+.t-team { color: var(--good); font-weight: 500; }
+
+/* profile mock */
+.profile { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 20px; display: grid; gap: 18px; }
+.profile-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; align-items: baseline; }
+.badge { font-size: 12px; font-weight: 600; border-radius: 999px; padding: 3px 10px; background: var(--tint-serve); color: var(--serve); letter-spacing: 0.04em; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.tile { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.tile .k { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.tile .v { font-family: var(--f-display); font-size: 30px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tile .s { font-size: 12.5px; color: var(--muted); line-height: 1.35; }
+.v.pos { color: var(--good); } .v.neg { color: var(--bad); }
+.profile-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 18px; }
+.profile-cols > div { min-width: 0; display: grid; gap: 8px; align-content: start; }
+.flag { display: flex; gap: 8px; font-size: 13.5px; align-items: baseline; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; transform: translateY(-1px); }
+.dot.warn { background: var(--warn); } .dot.info { background: var(--accent); } .dot.ok { background: var(--good); }
+.pairs { display: grid; gap: 4px; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.pairs div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px dashed var(--line); padding-bottom: 4px; }
+
+/* svg */
+svg text { font-family: var(--f-body); }
+.sv-ink { fill: var(--ink); } .sv-muted { fill: var(--muted); }
+.sv-line { stroke: var(--line); } .sv-acc { stroke: var(--accent); } .sv-srv { stroke: var(--serve); }
+.figure { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px; overflow-x: auto; }
+
+/* modules */
+.mods { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.mod { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.mod .for { font-size: 12.5px; color: var(--muted); }
+
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
+.two > div { min-width: 0; display: grid; gap: 10px; align-content: start; }
+footer { border-top: 1px solid var(--line); padding-top: 18px; font-size: 13px; color: var(--muted); }
+@media (max-width: 560px) {
+  .step { grid-template-columns: 1fr; gap: 6px; }
+  .step > .num { font-size: 34px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Concept canvas · Volleyball Landesliga · v0.1 · 21 Nov 2026</div>
+  <h1>Rally Impact Model</h1>
+  <p class="lede">How much does a player change the chance that her team wins a rally, once teammates, opponents and who serves are accounted for? This canvas describes an algorithm that answers that from SAMS score sheets alone, and turns the answer into player profiles for scouting, line-up decisions and form tracking.</p>
+  <div class="chips" aria-label="Decisions taken">
+    <span class="chip"><span>Unit</span><b>Rally</b></span>
+    <span class="chip"><span>Core model</span><b>Batch RAPM per window</b></span>
+    <span class="chip"><span>Liberos</span><b>Team-level term</b></span>
+    <span class="chip"><span>Output</span><b>Full profile</b></span>
+    <span class="chip"><span>Used for</span><b>Scouting · Own line-up · Form</b></span>
+    <span class="chip"><span>Data scope</span><b>Generic: any set of sheets</b></span>
+  </div>
+</header>
+
+<section aria-labelledby="pipe-h">
+  <div class="sec-head">
+    <div class="eyebrow">Pipeline</div>
+    <h2 id="pipe-h">From score sheet to profile</h2>
+  </div>
+  <nav class="pipe" aria-label="Pipeline steps">
+    <a class="src" href="#s0"><span class="n">0</span><span class="t">Score sheets</span><span class="o">SAMS PDFs, any leagues and seasons</span></a>
+    <a href="#s1"><span class="n">1</span><span class="t">Parse</span><span class="o">Line-ups, subs, service rounds, roster</span></a>
+    <a href="#s2"><span class="n">2</span><span class="t">Rebuild rallies</span><span class="o">Who was on court, who served, who won</span></a>
+    <a href="#s3"><span class="n">3</span><span class="t">Validate</span><span class="o">Sets that don't reconcile are dropped</span></a>
+    <a href="#s4"><span class="n">4</span><span class="t">Identify players</span><span class="o">One ID per person across teams and seasons</span></a>
+    <a href="#s5"><span class="n">5</span><span class="t">Fit per window</span><span class="o">Ridge logistic regression on all rallies</span></a>
+    <a href="#s6"><span class="n">6</span><span class="t">Uncertainty</span><span class="o">Bootstrap by match, separability check</span></a>
+    <a class="out" href="#s7"><span class="n">7</span><span class="t">Profiles &amp; modules</span><span class="o">Scouting, line-up, form</span></a>
+  </nav>
+</section>
+
+<section aria-labelledby="data-h" id="s0">
+  <div class="sec-head">
+    <div class="eyebrow">Step 0 · Input</div>
+    <h2 id="data-h">What a score sheet gives us</h2>
+  </div>
+  <div class="two">
+    <div>
+      <h3>Recorded</h3>
+      <ul class="tight">
+        <li>Starting six per set in rotation order I–VI</li>
+        <li>Substitutions with the score at the change</li>
+        <li><b>Service rounds</b>: the score at which each server's turn ended. These rebuild every rally in order.</li>
+        <li>Timeouts, set scores, set times, home and away</li>
+        <li>Roster with the used players, captain, liberos and MVP</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Not recorded</h3>
+      <ul class="tight">
+        <li>Who scored or lost a point: no attack, block, reception or error stats</li>
+        <li>Libero changes</li>
+        <li>Playing positions (setter, opposite, middle, outside)</li>
+      </ul>
+      <p class="note">So the only individual signal is the server. Everything else has to be inferred from who was on court when rallies were won or lost. About 180 rallies per match make that workable.</p>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="steps-h">
+  <div class="sec-head">
+    <div class="eyebrow">Steps 1–4 · Data preparation</div>
+    <h2 id="steps-h">Turning sheets into a rally table</h2>
+  </div>
+
+  <div class="step" id="s1">
+    <div class="num">1</div>
+    <div class="body">
+      <h3>Parse</h3>
+      <dl class="io">
+        <div><dt>In</dt><dd>One SAMS PDF (text layer)</dd></div>
+        <div><dt>Out</dt><dd>Match record: teams, home/away, date, league, and per set the start six, subs, service-round end scores and timeouts; roster as number → name with libero and captain flags</dd></div>
+      </dl>
+      <ul class="tight">
+        <li>Substitution scores are written from the substituting team's side. This was checked on the four LL4 2026/27 sheets.</li>
+        <li>Fix the text encoding on read (umlauts come out as <code>K&#xFFFD;kten</code> in the raw text layer).</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step" id="s2">
+    <div class="num">2</div>
+    <div class="body">
+      <h3>Rebuild rallies</h3>
+      <p>Walk each set from 0:0. The serving team keeps serving until the score in its service-round entry is reached, and then the other team wins the next point (a sideout) and rotates. Substitutions are applied at their recorded score. Each rally gets both on-court sixes, the server and the winner.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>match</th><th>set</th><th>rally</th><th>score before</th><th>serving</th><th>server</th><th>serving six</th><th>receiving six</th><th>won by</th><th>leverage</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">M014</td><td>2</td><td>37</td><td class="mono">17:19</td><td>B</td><td class="mono">B#9</td><td class="mono">9 14 33 23 41 25</td><td class="mono">14 8 5 13 23 7</td><td>A</td><td>0.92</td></tr>
+            <tr><td class="mono">M014</td><td>2</td><td>38</td><td class="mono">20:17</td><td>A</td><td class="mono">A#8</td><td class="mono">8 5 13 23 7 14</td><td class="mono">9 14 33 23 41 25</td><td>A</td><td>1.10</td></tr>
+            <tr><td class="mono">M014</td><td>2</td><td>39</td><td class="mono">21:17</td><td>A</td><td class="mono">A#8</td><td class="mono">8 5 13 23 7 14</td><td class="mono">9 14 33 23 41 25</td><td>B</td><td>1.31</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="caption">Illustrative rows. Scores are written serving team : receiving team. Leverage is filled in later (see the model section).</p>
+    </div>
+  </div>
+
+  <div class="step" id="s3">
+    <div class="num">3</div>
+    <div class="body">
+      <h3>Validate</h3>
+      <p>A set enters the model only if all of these hold. Otherwise it is logged and left out, so one bad parse can't distort a rating.</p>
+      <ul class="tight">
+        <li>The rebuilt final score equals the printed set score</li>
+        <li>Every substitution score lies on the rebuilt score path</li>
+        <li>At most 6 substitutions per team per set; every number is on the roster</li>
+        <li>The number of service rounds matches the number of sideouts</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="step" id="s4">
+    <div class="num">4</div>
+    <div class="body">
+      <h3>Identify players</h3>
+      <p>Jersey numbers are only valid within one match. A player ID is the normalized name (Unicode NFC, case-folded, "Surname, Firstname"). The same name on another team or in another season is treated as the same person, which carries information across promotion, relegation and transfers.</p>
+      <ul class="tight">
+        <li>Near-matches (one letter off, double names) go to a manual review list instead of being merged silently</li>
+        <li>Liberos are marked and are not rated individually (see the team term)</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="model-h" id="s5">
+  <div class="sec-head">
+    <div class="eyebrow">Step 5 · Core model</div>
+    <h2 id="model-h">Regularized adjusted plus-minus, per rally</h2>
+    <p>Every rally is framed the same way: <em>does the serving team win this point (a break point)?</em> The probability depends on the twelve players on court, the server and both teams' baselines. This is basketball's RAPM, applied to rallies instead of possessions.</p>
+  </div>
+
+  <div class="formula" role="math" aria-label="Model formula">
+    <div class="row">logit P(serving team wins rally r) =</div>
+    <div class="row">&nbsp;&nbsp;<span class="t-base">β</span>
+      &nbsp;+&nbsp;<span class="t-base">h·home</span>
+      &nbsp;+&nbsp;<span class="t-play">Σ<sub>i ∈ serving six</sub> (θ<sub>i</sub> + δ<sub>i</sub><sup>srv</sup>)</span>
+      &nbsp;−&nbsp;<span class="t-play">Σ<sub>j ∈ receiving six</sub> (θ<sub>j</sub> + δ<sub>j</sub><sup>rcv</sup>)</span></div>
+    <div class="row">&nbsp;&nbsp;+&nbsp;<span class="t-srv">σ<sub>server(r)</sub></span>
+      &nbsp;+&nbsp;<span class="t-team">τ<sub>serving team</sub> − τ<sub>receiving team</sub></span></div>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Term</th><th>Meaning</th><th>Shrunk toward</th><th>Penalty</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">β</td><td>League break-point rate on the logit scale (typically 35–40 %)</td><td>none</td><td>free</td></tr>
+        <tr><td class="mono">h</td><td>Home advantage (optional, +1 if the serving team is at home, −1 if away)</td><td>0</td><td>free</td></tr>
+        <tr><td class="mono t-play">θ<sub>i</sub></td><td><b>Overall impact</b> of player i while on court</td><td>Prior rating (previous window)</td><td class="mono">λ<sub>θ</sub></td></tr>
+        <tr><td class="mono t-play">δ<sub>i</sub><sup>srv</sup>, δ<sub>i</sub><sup>rcv</sup></td><td>Phase split: extra impact when her team serves (breaking) or receives (siding out)</td><td>0</td><td class="mono">λ<sub>δ</sub> &gt; λ<sub>θ</sub></td></tr>
+        <tr><td class="mono t-srv">σ<sub>k</sub></td><td><b>Serve rating</b>: extra break chance on rallies player k serves herself</td><td>Prior rating</td><td class="mono">λ<sub>σ</sub></td></tr>
+        <tr><td class="mono t-team">τ<sub>t</sub></td><td><b>Team and libero term</b>: everything constant for a team that the listed six don't explain (libero, system, coaching)</td><td>0</td><td class="mono">λ<sub>τ</sub> ≫ λ<sub>θ</sub></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two">
+    <div>
+      <h3>Fitting</h3>
+      <ul class="tight">
+        <li>Minimize the weighted log-loss over all rallies in the window plus the ridge penalties: <code>λ<sub>θ</sub>Σ(θ − θ<sup>prior</sup>)² + λ<sub>δ</sub>Σδ² + λ<sub>σ</sub>Σ(σ − σ<sup>prior</sup>)² + λ<sub>τ</sub>Στ²</code></li>
+        <li>Choose the λ values by forward-chaining cross-validation: fit up to match day d, score the rallies of day d+1</li>
+        <li>λ<sub>τ</sub> is kept large so team strength is credited to players wherever the data allows. τ only absorbs what can't be attributed, mainly the libero.</li>
+        <li>Players who always play together can't be told apart. The ridge then splits their credit evenly instead of producing extreme values.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Units people can read</h3>
+      <ul class="tight">
+        <li><b>Impact</b> = point difference per 100 rallies compared with an average league player: <code>100 · 2 · (P(β+θ) − P(β))</code>, roughly <code>50·θ</code>. This is the same unit as the v0 squad report.</li>
+        <li><b>Serve</b> = extra break points per 100 own serves: <code>100 · (P(β+σ) − P(β))</code></li>
+        <li><b>Sideout and break impact</b> = θ + δ<sup>rcv</sup> and θ + δ<sup>srv</sup>, in the same unit</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="two">
+    <div>
+      <h3>Leverage weighting (optional)</h3>
+      <p>Each rally gets a weight equal to how much it moves the chance of winning the set: <code>L(r) = P(set | point won) − P(set | point lost)</code>. This comes from a set-level Markov chain that uses the league sideout and break rates and plays to 25 (15 in a fifth set), win by 2. Weights are normalized to a mean of 1.</p>
+      <p><b>Clutch</b> = θ fitted with leverage weights − θ fitted without them. A rally at 23:23 counts about three times as much as one at 5:12.</p>
+    </div>
+    <div>
+      <h3>Windows: season and form</h3>
+      <p>The same model is fitted twice per match day d:</p>
+      <ul class="tight">
+        <li><b>Season</b>: all rallies up to d. The prior is last season's rating × ρ (for example 0.7), or 0 for a new player.</li>
+        <li><b>Form</b>: only the last K matches (for example 3), shrunk toward the season rating from before the window. <b>Form delta</b> = form − season.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="figure" role="img" aria-label="Timeline of match days 1 to 10. The season window covers days 1 to 7. The form window covers days 5 to 7 and takes its prior from the season rating at day 4.">
+    <svg viewBox="0 0 680 168" width="100%" style="min-width:560px; display:block">
+      <g class="sv-muted" font-size="12">
+        <text x="16" y="63">Season</text>
+        <text x="16" y="113">Form, K = 3</text>
+      </g>
+      <g font-size="12" class="sv-muted" text-anchor="middle">
+        <text x="140" y="24">1</text><text x="194" y="24">2</text><text x="248" y="24">3</text><text x="302" y="24">4</text><text x="356" y="24">5</text>
+        <text x="410" y="24">6</text><text x="464" y="24">7</text><text x="518" y="24">8</text><text x="572" y="24">9</text><text x="626" y="24">10</text>
+      </g>
+      <g class="sv-line" stroke-width="1">
+        <line x1="140" y1="32" x2="140" y2="130"/><line x1="194" y1="32" x2="194" y2="130"/><line x1="248" y1="32" x2="248" y2="130"/><line x1="302" y1="32" x2="302" y2="130"/>
+        <line x1="356" y1="32" x2="356" y2="130"/><line x1="410" y1="32" x2="410" y2="130"/><line x1="464" y1="32" x2="464" y2="130"/><line x1="518" y1="32" x2="518" y2="130"/>
+        <line x1="572" y1="32" x2="572" y2="130"/><line x1="626" y1="32" x2="626" y2="130"/>
+      </g>
+      <rect x="122" y="48" width="360" height="22" rx="6" fill="var(--accent)" opacity="0.85"/>
+      <rect x="338" y="98" width="144" height="22" rx="6" fill="var(--serve)" opacity="0.85"/>
+      <path d="M302 72 C 302 88, 326 92, 334 102" fill="none" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="4 3"/>
+      <polygon points="337,106 328,99 337,97" fill="var(--muted)"/>
+      <text x="294" y="94" font-size="12" class="sv-muted" text-anchor="end">prior: season @ day 4</text>
+      <text x="464" y="150" font-size="12" class="sv-ink" text-anchor="middle">today = day 7</text>
+      <text x="660" y="150" font-size="11" class="sv-muted" text-anchor="end">match day →</text>
+    </svg>
+  </div>
+</section>
+
+<section aria-labelledby="unc-h" id="s6">
+  <div class="sec-head">
+    <div class="eyebrow">Step 6 · Trust</div>
+    <h2 id="unc-h">How sure is each number?</h2>
+  </div>
+  <div class="two">
+    <div>
+      <h3>Bootstrap by match</h3>
+      <p>Resample whole matches within the window about 200 times and refit. The 10th to 90th percentile of the results is the 80 % band shown next to every rating. Resampling whole matches keeps the rallies of one match together, so the band isn't falsely narrow.</p>
+    </div>
+    <div>
+      <h3>Separability and sample flags</h3>
+      <ul class="tight">
+        <li><b>Inseparable</b>: her on-court pattern correlates above 0.95 with a teammate's. The rating is effectively shared and the profile says with whom.</li>
+        <li><b>Small sample</b>: fewer than 100 rallies in the window. The rating is shown greyed out.</li>
+        <li><b>Libero</b>: no individual rating. Her contribution is inside the team term τ.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="out-h" id="s7">
+  <div class="sec-head">
+    <div class="eyebrow">Step 7 · Output</div>
+    <h2 id="out-h">The player profile</h2>
+    <p>One card per player and window. The numbers below are made up to show the layout. They are not real data.</p>
+  </div>
+
+  <article class="profile" aria-label="Example player profile">
+    <div class="profile-head">
+      <div>
+        <div class="eyebrow">Team A · #7 · position not recorded</div>
+        <h3 style="font-size:28px">Example Player</h3>
+      </div>
+      <span class="badge">ILLUSTRATIVE VALUES</span>
+    </div>
+    <div class="tiles">
+      <div class="tile"><span class="k">Impact</span><span class="v pos">+4.1</span><span class="s">pts / 100 rallies · 80 %: +0.8 to +7.3</span></div>
+      <div class="tile"><span class="k">Sideout</span><span class="v pos">+5.6</span><span class="s">when receiving</span></div>
+      <div class="tile"><span class="k">Break</span><span class="v pos">+2.2</span><span class="s">when serving</span></div>
+      <div class="tile"><span class="k">Serve</span><span class="v pos">+6.0</span><span class="s">break pts / 100 own serves · 212 serves</span></div>
+      <div class="tile"><span class="k">Clutch</span><span class="v neg">−1.2</span><span class="s">leverage-weighted − plain</span></div>
+      <div class="tile"><span class="k">Playing time</span><span class="v">1 144</span><span class="s">rallies · 84 % share · 22 starts</span></div>
+    </div>
+    <div class="profile-cols">
+      <div>
+        <h3>Form, last 10 match days</h3>
+        <svg viewBox="0 0 320 120" width="100%" role="img" aria-label="Season rating rises slowly from plus 2 to plus 4; form rating swings between 0 and plus 7.">
+          <line x1="28" y1="96" x2="312" y2="96" class="sv-line" stroke-width="1"/>
+          <line x1="28" y1="60" x2="312" y2="60" class="sv-line" stroke-width="1" stroke-dasharray="3 3"/>
+          <line x1="28" y1="24" x2="312" y2="24" class="sv-line" stroke-width="1" stroke-dasharray="3 3"/>
+          <text x="22" y="99" font-size="10" text-anchor="end" class="sv-muted">0</text>
+          <text x="22" y="63" font-size="10" text-anchor="end" class="sv-muted">+4</text>
+          <text x="22" y="27" font-size="10" text-anchor="end" class="sv-muted">+8</text>
+          <path d="M28 78 L60 76 L91 74 L123 71 L154 70 L186 67 L217 65 L249 63 L280 62 L312 59 L312 75 L280 79 L249 82 L217 85 L186 88 L154 91 L123 93 L91 96 L60 98 L28 100 Z" fill="var(--accent)" opacity="0.12"/>
+          <polyline points="28,89 60,87 91,85 123,82 154,81 186,78 217,75 249,73 280,71 312,67" fill="none" class="sv-acc" stroke-width="2.2"/>
+          <polyline points="28,92 60,80 91,66 123,58 154,72 186,90 217,82 249,62 280,44 312,40" fill="none" class="sv-srv" stroke-width="2.2"/>
+          <circle cx="312" cy="40" r="3.5" fill="var(--serve)"/>
+          <circle cx="312" cy="67" r="3.5" fill="var(--accent)"/>
+          <text x="28" y="116" font-size="10" class="sv-muted">day 1</text>
+          <text x="312" y="116" font-size="10" text-anchor="end" class="sv-muted">day 10</text>
+        </svg>
+        <div class="chips">
+          <span class="chip"><span style="color:var(--accent)">━</span><b>Season</b><span>with 80 % band</span></span>
+          <span class="chip"><span style="color:var(--serve)">━</span><b>Form</b><span>last 3 matches</span></span>
+        </div>
+      </div>
+      <div>
+        <h3>Partners (exploratory)</h3>
+        <p class="caption">Model residual while both are on court, shrunk by rallies together.</p>
+        <div class="pairs">
+          <div><span>with #12</span><span style="color:var(--good)">+3.4 · 610 rallies</span></div>
+          <div><span>with #3</span><span style="color:var(--good)">+1.9 · 880 rallies</span></div>
+          <div><span>with #18</span><span style="color:var(--bad)">−2.6 · 240 rallies</span></div>
+        </div>
+        <h3 style="margin-top:8px">Flags</h3>
+        <div class="flag"><span class="dot warn"></span><span>Hard to separate from #3 (on-court correlation 0.91)</span></div>
+        <div class="flag"><span class="dot info"></span><span>Libero effect of Team A is in the team term</span></div>
+        <div class="flag"><span class="dot ok"></span><span>Sample sufficient (more than 100 rallies in both windows)</span></div>
+      </div>
+    </div>
+  </article>
+</section>
+
+<section aria-labelledby="mod-h">
+  <div class="sec-head">
+    <div class="eyebrow">Modules on top of the profiles</div>
+    <h2 id="mod-h">What the ratings are used for</h2>
+  </div>
+  <div class="mods">
+    <div class="mod">
+      <h3>Scouting an opponent</h3>
+      <span class="for">For: the next game's game plan</span>
+      <ul class="tight">
+        <li>Players ranked by impact, with the band and flags</li>
+        <li>Best and weakest servers (σ)</li>
+        <li><b>Rotation table</b>: sideout % and break % in each of their 6 rotations, observed vs expected. The weakest sideout rotation is where to serve hardest.</li>
+        <li>Their usual starting six and substitution habits (who comes on when trailing)</li>
+      </ul>
+    </div>
+    <div class="mod">
+      <h3>Our own line-up</h3>
+      <span class="for">For: who starts, who comes on</span>
+      <ul class="tight">
+        <li><b>Line-up predictor</b>: pick any six and an opponent. The model gives sideout % and break %, and the Markov chain turns them into P(set win).</li>
+        <li>Compare candidates side by side, e.g. "#12 instead of #18 against Team C: +6 % set-win chance"</li>
+        <li>Our own rotation table, to place strong servers and passers</li>
+      </ul>
+    </div>
+    <div class="mod">
+      <h3>Form over time</h3>
+      <span class="for">For: spotting slumps and development</span>
+      <ul class="tight">
+        <li>Season and form curves per player, refreshed after every match day</li>
+        <li>An alert when form leaves the season band two match days in a row</li>
+        <li>Team view: whose form moved most since the last report</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="val-h">
+  <div class="sec-head">
+    <div class="eyebrow">Does it work?</div>
+    <h2 id="val-h">Backtest before trusting a single rating</h2>
+    <p>Fit on match days 1…d and predict day d+1, then roll forward through the season. Score with log-loss on rallies and accuracy on set winners.</p>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Model</th><th>Knows</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td>League rate</td><td>Break-point rate only</td><td>Floor</td></tr>
+        <tr><td>Team-only</td><td>One rating per team, no players</td><td><b>The bar to beat.</b> If the player model doesn't beat it, the player differences are noise and the profiles say so.</td></tr>
+        <tr><td>v0 plus-minus</td><td>Raw on/off per player</td><td>The current method, for comparison</td></tr>
+        <tr><td>Rally impact model</td><td>All of the above, adjusted</td><td>Candidate</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section aria-labelledby="lim-h">
+  <div class="sec-head">
+    <div class="eyebrow">Limits and settings</div>
+    <h2 id="lim-h">What it can't do, and what to tune</h2>
+  </div>
+  <div class="two">
+    <div>
+      <h3>Known limits</h3>
+      <ul class="tight">
+        <li>It measures a player's effect on rallies, not her actions. A great passer next to a weak hitter can look average.</li>
+        <li>Positions are unknown, so a setter and an outside are compared on one scale.</li>
+        <li>Liberos get no individual rating, and middles may carry a little of the libero's effect.</li>
+        <li>Teams that never substitute give wide bands. Only cross-season and cross-team data can narrow them.</li>
+        <li>Name matching can merge two different people with the same name. These cases go to manual review.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Settings</h3>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Setting</th><th>Start value</th><th>How set</th></tr></thead>
+          <tbody>
+            <tr><td>λ<sub>θ</sub>, λ<sub>δ</sub>, λ<sub>σ</sub>, λ<sub>τ</sub></td><td>from CV</td><td>Forward-chaining CV</td></tr>
+            <tr><td>Form window K</td><td>3 matches</td><td>Coach preference</td></tr>
+            <tr><td>Season carry-over ρ</td><td>0.7</td><td>Backtest on season 2</td></tr>
+            <tr><td>Min. rallies to show</td><td>100</td><td>Fixed</td></tr>
+            <tr><td>Bootstrap draws</td><td>200</td><td>Fixed</td></tr>
+            <tr><td>Leverage weights</td><td>on for clutch only</td><td>Fixed</td></tr>
+            <tr><td>Home term</td><td>on</td><td>Drop if ≈ 0</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section aria-labelledby="ref-h">
+  <div class="sec-head">
+    <div class="eyebrow">Background</div>
+    <h2 id="ref-h">Where the ideas come from</h2>
+  </div>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Idea</th><th>Origin</th><th>Used here as</th></tr></thead>
+      <tbody>
+        <tr><td>Plus-minus, on/off</td><td>Ice hockey, basketball</td><td>v0, and the backtest baseline</td></tr>
+        <tr><td>RAPM (ridge-regularized adjusted plus-minus)</td><td>Basketball (NBA analytics), hockey</td><td>Core model (step 5)</td></tr>
+        <tr><td>Prior-informed RAPM</td><td>Basketball multi-year RAPM</td><td>Season carry-over ρ, form shrinks toward season</td></tr>
+        <tr><td>Win probability added, leverage</td><td>Baseball, cricket, NFL</td><td>Leverage weights, clutch</td></tr>
+        <tr><td>Rotation sideout / break analysis</td><td>Volleyball scouting (DataVolley)</td><td>Rotation table in the scouting and line-up modules</td></tr>
+        <tr><td>Elo / TrueSkill</td><td>Chess, online gaming</td><td>Considered and not chosen: form comes from windows instead</td></tr>
+        <tr><td>Event models (xG, VAEP)</td><td>Soccer</td><td>Not possible: no event data on the sheets</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>Concept canvas, not an implementation. Built for SAMS Score sheets (Landesliga Damen 2025/26 and 2026/27), but designed for any set of sheets. Example values on this page are made up.</footer>
+
+</div>

@@ -1,0 +1,12 @@
+# data
+
+Input score sheets. **The files are git-ignored**; only this README and the `.gitkeep` placeholders are tracked. Copy the PDFs in by hand on every machine.
+
+| Folder | Content | File names |
+|---|---|---|
+| `LL_2526/` | 288 SAMS score sheets, Landesliga 1–4 Damen, season 2025/26 | `LL{n}_Damen_Nr{nn}_{Home}_vs_{Away}.pdf` |
+| `LL4_2627/` | Landesliga 4 Frauen, season 2026/27 (ongoing) | `{game number}.pdf` |
+
+`LL4_2627/Burladingen 2 Squad Analysis.pdf` is the output of the v0 plus-minus analysis, not an input sheet.
+
+A new season or league gets its own folder in the same style, for example `LL4_2728/`.
