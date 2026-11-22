@@ -1,8 +1,8 @@
 ---
 id: 005
-title: Fit the rally model per window (season and form)
+title: "rapm_sams: fit the rally model per window (season and form)"
 status: open
-depends: [002, 003, 004]
+depends: [010, 011]
 ---
 
 ## Goal
@@ -19,4 +19,4 @@ Estimate θ (impact), δ (sideout/break split), σ (serve) and τ (team/libero) 
 
 ## Notes
 
-Leverage weights come from issue 006; until then, fit without weights.
+Implements `RatingModel` as `rapm_sams` (`requires = {rallies, server}`), see [_doc/08_architecture.md](../../_doc/08_architecture.md). Leverage weights come from issue 006; until then, fit without weights.

@@ -3,6 +3,7 @@ data/**
 !data/**/
 !data/**/.gitkeep
 !data/README.md
+!data/positions/_template.csv
 
 # Python, if chosen (see _work/issues/000)
 __pycache__/

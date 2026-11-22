@@ -14,7 +14,7 @@ Fit on match days 1…d and predict day d+1, then roll forward through the seaso
 ## Known limits
 
 - It measures a player's effect on rallies, not her actions. A great passer next to a weak hitter can look average.
-- Positions are unknown, so a setter and an outside are compared on one scale.
+- Without a position list, a setter and an outside are compared on one scale. With one, `rapm_positions` rates players relative to their position ([08_architecture.md](08_architecture.md)).
 - Liberos get no individual rating, and middles may carry a little of the libero's effect.
 - Teams that never substitute give wide bands. Only cross-season and cross-team data can narrow them.
 - Name matching can merge two different people with the same name. These cases go to manual review.

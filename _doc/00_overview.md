@@ -16,6 +16,8 @@ How much does a player change the chance that her team wins a rally, once teamma
 | Liberos | Team-level term | Libero changes are not on the sheet |
 | Output | Full profile | Covers all three uses |
 | Data scope | Generic | Leagues and seasons are configuration, not code |
+| Runtime | Python CLI + static HTML, no agent | Must run unattended |
+| Model choice | Swappable, picked by data capabilities | Richer leagues have positions (manual list) and inferred libero data |
 
 ## Documents
 
@@ -28,6 +30,7 @@ How much does a player change the chance that her team wins a rally, once teamma
 | [05_outputs.md](05_outputs.md) | Step 7: player profile and the scouting, line-up and form modules |
 | [06_validation.md](06_validation.md) | Backtest, known limits, settings |
 | [07_background.md](07_background.md) | How other sports rate players; concepts considered and rejected |
+| [08_architecture.md](08_architecture.md) | Software design: layers, contracts, swappable models, CLI, stack |
 
 ## Pipeline at a glance
 

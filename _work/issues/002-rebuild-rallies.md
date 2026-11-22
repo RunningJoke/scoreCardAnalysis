@@ -2,7 +2,7 @@
 id: 002
 title: Rebuild the rally sequence per set
 status: open
-depends: [001]
+depends: [001, 011]
 ---
 
 ## Goal

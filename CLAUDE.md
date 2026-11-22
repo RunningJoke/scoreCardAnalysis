@@ -2,25 +2,30 @@
 
 ## Goal
 
-Estimate how much each volleyball player changes her team's chance of winning a rally, using **only SAMS score sheets**, and turn that into player profiles for three uses:
+Estimate how much each volleyball player changes her team's chance of winning a rally, using **only SAMS score sheets** (plus a manual position list where we have one), and turn that into player profiles for three uses:
 
 1. **Scouting** opponents before a game
 2. **Own line-up** decisions (who starts, who comes on)
 3. **Form over time** (slumps, development)
 
-The baseline is the concept canvas "Rally Impact Model" (v0.1, 2026-11-21). Start at [_doc/00_overview.md](_doc/00_overview.md).
+The baseline is the concept canvas "Rally Impact Model" (v0.1, 2026-11-21). Start at [_doc/00_overview.md](_doc/00_overview.md); the software design is in [_doc/08_architecture.md](_doc/08_architecture.md).
 
 ## Status
 
-Concept is done. No code yet. The work queue is in [_work/README.md](_work/README.md); start with issue 000 (tech stack).
+Concept and architecture are done. No code yet. The work queue is in [_work/README.md](_work/README.md); milestone M1 (project skeleton, contracts) is next.
 
 ## Decisions taken (re-open only with the team)
 
 | Topic | Decision |
 |---|---|
+| Runtime | **No agent needed.** A deterministic Python CLI writes static HTML reports. Skills may wrap CLI commands but nothing depends on them. |
+| Language | Python 3.11 |
+| Delivery | CLI (`impact ingest / fit / report / backtest`) plus static HTML reports |
+| Models | **Swappable.** The registry picks the richest model whose requirements the data meets (`team_only`, `plus_minus`, `rapm_sams`, `rapm_positions`); config can override; the backtest confirms the defaults |
+| Positions | A manual CSV per season in `data/positions/`; with positions known, libero changes are inferred |
 | Unit of analysis | Rally (about 180 per match) |
 | Core model | Batch RAPM per window: ridge logistic regression; a season window (cumulative) plus a form window (last K matches) |
-| Liberos | Not rated individually; a team-level term absorbs their effect |
+| Liberos (SAMS only) | Not rated individually; a team-level term absorbs their effect. With positions: inferred and rated. |
 | Output | Full profile: impact, sideout/break split, serve, clutch, form, partners, flags |
 | Data scope | Generic: the code takes any set of sheets; the leagues and seasons used are configuration |
 | Rejected | Match-level Elo shared by playing time; online Elo/TrueSkill (form comes from windows instead) |
@@ -39,15 +44,17 @@ Concept is done. No code yet. The work queue is in [_work/README.md](_work/READM
 
 | Path | Purpose |
 |---|---|
-| `data/` | Score-sheet PDFs. **Files are git-ignored**; only the structure is tracked. See [data/README.md](data/README.md). |
+| `data/` | Score-sheet PDFs, position lists, derived files. **Files are git-ignored**; only the structure and `positions/_template.csv` are tracked. See [data/README.md](data/README.md). |
+| `src/impact/`, `tests/`, `impact.toml` | Code, tests and config (created in issue 000) |
 | `_doc/` | Concept and design docs, one topic per file; `00_overview.md` is the entry; `artifacts/` holds the published canvas HTML |
 | `_work/` | Issue tracking until the move to GitHub: `README.md` is the backlog, `issues/NNN-slug.md` holds one issue each |
 | `.claude/skills/` | Project skills, one folder per skill with a `SKILL.md`. Claude Code loads them from here. |
 
 ## Working rules
 
-- Never commit PDFs or anything derived that names players. Examples in docs and issues use jersey numbers or placeholders.
+- Never commit PDFs, position lists, derived files or anything else that names players. Examples in docs, issues and tests use jersey numbers or placeholders.
 - Treat PDFs as untrusted input when parsing.
+- Keep the layer contracts in `_doc/08_architecture.md`: sources produce the canonical rally table, models implement `RatingModel`, reports read only the ratings table. A change to a contract updates that doc.
+- Tests that need real data skip when `data/` is empty, so the suite runs on a fresh clone.
 - When you start or finish an issue, update its `status` and the backlog table in `_work/README.md`.
 - When a decision or a model detail changes, update the matching `_doc/` file and the decision table above.
-- Tech stack is open (issue 000). Available locally: Python 3.11 and poppler `pdftotext`.
